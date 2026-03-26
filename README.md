@@ -1,4 +1,5 @@
 # 🌐 OmniQuery Intelligence v1.0
+website - https://omniquery-intelligence-ai.streamlit.app/
 **An AI-Powered Natural Language to SQL Interface**
 
 Developed by **Mayur | MCA Graduate**
