@@ -6,34 +6,46 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def run_query(query):
+def get_connection():
+    """Helper to return the correct connection object."""
     if os.path.exists("sakila.db"):
-        conn = sqlite3.connect("sakila.db")
-        # Use pandas for consistent dictionary output
-        df = pd.read_sql_query(query, conn)
-        conn.close()
-        return df.to_dict(orient="records")
+        return sqlite3.connect("sakila.db")
     else:
-        conn = mysql.connector.connect(
+        return mysql.connector.connect(
             host="localhost",
             user="root",
             password=os.getenv("DB_PASSWORD"),
             database="sakila"
         )
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute(query)
-        result = cursor.fetchall()
+
+def run_query(query):
+    conn = get_connection()
+    try:
+        if os.path.exists("sakila.db"):
+            # SQLite Path
+            df = pd.read_sql_query(query, conn)
+            return df.to_dict(orient="records")
+        else:
+            # MySQL Path
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute(query)
+            result = cursor.fetchall()
+            return result
+    finally:
         conn.close()
-        return result
 
 def get_db_schema(db_name):
-    # 1. SQLITE SCHEMA LOGIC
+    """Fetches schema differently based on DB type."""
     if os.path.exists("sakila.db"):
-        query = "SELECT name as table_name, sql as columns FROM sqlite_master WHERE type='table';"
+        # SQLite way to get table and column info
+        query = """
+        SELECT m.name as table_name, 
+        (SELECT GROUP_CONCAT(name, ', ') FROM pragma_table_info(m.name)) as columns
+        FROM sqlite_master m WHERE m.type='table' AND m.name NOT LIKE 'sqlite_%';
+        """
         return run_query(query)
-    
-    # 2. MYSQL SCHEMA LOGIC
     else:
+        # MySQL way (Your original code)
         clean_name = db_name.lower() 
         query = f"""
         SELECT table_name, GROUP_CONCAT(column_name SEPARATOR ', ') as columns
@@ -44,11 +56,10 @@ def get_db_schema(db_name):
         return run_query(query)
 
 def get_db_fingerprint():
-    # 1. SQLITE FINGERPRINT (Simple version for Cloud)
+    """Generates a unique ID for the DB state."""
     if os.path.exists("sakila.db"):
-        return f"sqlite-sakila-{os.path.getmtime('sakila.db')}"
-
-    # 2. MYSQL FINGERPRINT (For Mayur's PC)
+        # Just use the file modification time as a fingerprint for SQLite
+        return f"sqlite-{os.path.getmtime('sakila.db')}"
     else:
         query = """
         SELECT CONCAT(DATABASE(), '-', IFNULL(MAX(UPDATE_TIME), '0'), '-', MAX(CREATE_TIME)) as fp
@@ -57,8 +68,6 @@ def get_db_fingerprint():
         """
         try:
             result = run_query(query)
-            if result and 'fp' in result[0]:
-                return str(result[0]['fp'])
-            return "no_data_fingerprint"
-        except Exception:
-            return "error_fp_fallback"
+            return str(result[0]['fp']) if result else "no_fp"
+        except:
+            return "default_fp"
