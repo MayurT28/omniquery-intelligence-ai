@@ -8,6 +8,8 @@ from google import genai
 import plotly.express as px
 import random
 
+st.sidebar.write(f"Cloud Mode (SQLite): {os.path.exists('sakila.db')}")
+
 sql = ""
 df = pd.DataFrame()
 
