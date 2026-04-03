@@ -16,7 +16,8 @@ sqlite_db = sqlite3.connect("sakila.db")
 sqlite_cursor = sqlite_db.cursor()
 
 # 3. Tables to copy
-tables = ['film', 'actor', 'category', 'film_category', 'inventory']
+mysql_cursor.execute("SHOW TABLES")
+tables = [table[0] for table in mysql_cursor.fetchall()]
 
 for table in tables:
     print(f"📦 Copying table: {table}...")

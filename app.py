@@ -50,20 +50,32 @@ def get_python_summary(df):
         return f"The financial record shows a total of **{total_val}**."
 
     # 3. Logic for People (Customers/Actors)
-    if any(word in col_names for word in ['name', 'customer', 'actor', 'first_name']):
+    if any(word in col_names for word in ['customer', 'actor', 'first_name']):
         if rows > 5:
             return f"I've pulled up a list of {rows} people for you. The top results include **{df.iloc[0, 0]}** and **{df.iloc[1, 0]}**."
         return f"I found {rows} individuals matching your search. You can see their details in the table below."
 
-    # 4. Logic for Counts (e.g., "How many...")
-    if rows > 1:
-        # Randomized openings to make it feel less robotic
-        openings = [
-            f"Alright, I've gathered the data! There are **{rows} items** in total.",
-            f"I found **{rows} results** for you. Here is the breakdown:",
-            f"The database returned **{rows} records**. I've organized them below."
+        # 4. Logic for Counts (e.g., "How many...")
+        # 4. Logic for Grouped Results (Counts / Comparisons)
+    if rows > 1 and cols >= 2:
+        label_col = df.columns[0]
+        value_col = df.columns[1]
+
+        preview = [
+            f"{df.iloc[i, 0]}: {df.iloc[i, 1]}"
+            for i in range(min(rows, 5))
         ]
-        return random.choice(openings)
+
+        preview_text = ", ".join(preview)
+
+        top_label = df.iloc[0, 0]
+        top_value = df.iloc[0, 1]
+
+        return (
+            f"I analyzed **{rows} grouped results**. "
+            f"The highest value is **{top_value}** for **{top_label}**. "
+            f"Breakdown: {preview_text}."
+        )
 
     return f"I found one matching result with the details you requested."
 
@@ -182,7 +194,10 @@ if st.session_state.current_df is not None:
         
         # Clean data types (Ensure numbers are numbers)
         for col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='ignore')
+            try:
+                df[col] = pd.to_numeric(df[col])
+            except:
+                pass
         
         num_cols = df.select_dtypes(include=['number']).columns.tolist()
         cat_cols = df.select_dtypes(include=['object', 'datetime']).columns.tolist()
@@ -195,6 +210,7 @@ if st.session_state.current_df is not None:
                 fig = px.pie(df, names=label, values=value, hole=0.4, 
                             title=f"Distribution of {value} by {label}",
                             color_discrete_sequence=px.colors.sequential.RdBu)
+                fig.update_traces(textinfo="label+percent+value")
                 st.plotly_chart(fig, use_container_width=True)
                 st.caption("🎯 *Pie/Donut Chart: Optimized for proportional distribution.*")
 

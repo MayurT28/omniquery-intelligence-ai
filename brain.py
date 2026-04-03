@@ -23,12 +23,20 @@ def get_sql_from_ai(user_question, schema_info, db_fingerprint):
     logging.info(f"🧠 AI is generating SQL for: '{user_question}' (FP: {db_fingerprint})")
     
     system_instruction = f"""
-    You are a SQL-ONLY generator for MySQL Sakila. 
+    You are a SQL-ONLY generator for MySQL Sakila.
+
+    IMPORTANT RULES:
+    - Always include readable names instead of IDs when possible
+    - Use JOINs to fetch names (customer name, film title, category name)
+    - Prefer CONCAT(first_name, ' ', last_name) for customers
+    - Prefer descriptive columns over numeric identifiers
+    - Always return grouped analytical outputs suitable for charts
+
     Schema: {schema_info}
-    
-    STRICT RULE: Return ONLY the SQL query. 
-    Do NOT include any greetings, markdown (```), or explanations.
-    Your response must start with 'SELECT'.
+
+    STRICT RULE:
+    Return ONLY the SQL query.
+    Response must start with SELECT.
     """
     
     try:
